@@ -1,0 +1,12 @@
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/klt_tracker_test.dir
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/monocular_calibration.dir
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/monocular_image_grabber.dir
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/motion_estimator_test.dir
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/rgbd_loader_test.dir
+/home/msrj/Documents/rgbd_rtk/build/common/CMakeFiles/rgbd_rtk_common.dir
+/home/msrj/Documents/rgbd_rtk/build/io/CMakeFiles/rgbd_rtk_io.dir
+/home/msrj/Documents/rgbd_rtk/build/motion_estimation/CMakeFiles/rgbd_rtk_motion_estimation.dir
+/home/msrj/Documents/rgbd_rtk/build/tracking/CMakeFiles/rgbd_rtk_tracking.dir
+/home/msrj/Documents/rgbd_rtk/build/visualization/CMakeFiles/rgbd_rtk_visualization.dir
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/sequence_loader_test.dir
+/home/msrj/Documents/rgbd_rtk/build/applications/CMakeFiles/surf_tracker_test.dir
