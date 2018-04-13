@@ -6,6 +6,7 @@ message(STATUS ">>> applications subdirectory")
 
 add_executable(monocular_calibration monocular_calibration.cpp)
 add_executable(monocular_image_grabber monocular_image_grabber.cpp)
+add_executable(kinect_grabber kinect_grabber.cpp)
 add_executable(sequence_loader_test sequence_loader_test.cpp)
 add_executable(rgbd_loader_test rgbd_loader_test.cpp)
 add_executable(klt_tracker_test klt_tracker_test.cpp)
@@ -23,6 +24,7 @@ find_library(RGBD_RTK_VISUAL_ODOMETRY NAMES rgbd_rtk_visual_odometry)
 
 target_link_libraries(monocular_calibration ${OpenCV_LIBRARIES})
 target_link_libraries(monocular_image_grabber ${OpenCV_LIBRARIES})
+target_link_libraries(kinect_grabber ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION})
 target_link_libraries(sequence_loader_test ${RGBD_RTK_IO})
 target_link_libraries(rgbd_loader_test ${RGBD_RTK_IO})
 target_link_libraries(klt_tracker_test ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING})
@@ -36,6 +38,7 @@ target_link_libraries(optical_flow_visual_odometry_test ${PCL_LIBRARIES} ${RGBD_
 
 install(TARGETS monocular_calibration
 	            monocular_image_grabber
+	            kinect_grabber
 	            sequence_loader_test
                 rgbd_loader_test
                 klt_tracker_test
