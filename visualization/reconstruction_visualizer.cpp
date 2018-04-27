@@ -113,25 +113,18 @@ void ReconstructionVisualizer::addQuantizedPointCloud(const pcl::PointCloud<Poin
 	addPointCloud(quant_cloud, pose);
 }
 
-void ReconstructionVisualizer::viewReferenceFrame(const Eigen::Affine3f pose, const std::string text)
+void ReconstructionVisualizer::viewReferenceFrame(const Eigen::Affine3f pose)
 {
-	/*
-	//THIS DOES NOT WORK AS EXPECTED
-	if(!viewer_->updateCoordinateSystemPose(text, pose))
+	if(!viewer_->updateCoordinateSystemPose("cam", pose))
 	{
-		viewer_->addCoordinateSystem(0.3, pose, text);
+		viewer_->addCoordinateSystem(0.3, pose, "cam");
 	}
-	*/
-	viewer_->removeCoordinateSystem(text);
-	viewer_->addCoordinateSystem(0.3, pose, text);
 	PointT pos;
 	pos.x = pose(0,3) + 0.02;
 	pos.y = pose(1,3) + 0.05;
 	pos.z = pose(2,3);
-	stringstream ss;
-	ss << text << "_text";
-	viewer_->removeText3D(ss.str());
-	viewer_->addText3D(text, pos, 0.025, 1, 1, 1, ss.str());
+	viewer_->removeText3D("cam_text");
+	viewer_->addText3D("cam", pos, 0.025, 1, 1, 1, "cam_text");
 }
 
 void ReconstructionVisualizer::viewPointCloud(const pcl::PointCloud<PointT>::Ptr cloud, const Eigen::Affine3f pose)
