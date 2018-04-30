@@ -136,10 +136,13 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
   }
 
   //Detect and view Aruco markers
-  marker_detector.detect(rgb, markers, camera_params, marker_size);
+  marker_detector.detect(rgb, markers, camera_params, marker_size); 
+
+
   
   for (size_t j = 0; j < markers.size(); j++){
     markers[j].draw(rgb, Scalar(0,0,255), 1);
+    // use to put names on ids cout<<markers[j].id<<" ";
     CvDrawingUtils::draw3dAxis(rgb, markers[j], camera_params);
     Eigen::Affine3f marker_pose = convertMarkerPoseToEigen(markers[j].Rvec, markers[j].Tvec);
     marker_pose = cam_pose*marker_pose;
@@ -147,7 +150,7 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
     ss << "m" << markers[j].id;
     //visualizer.viewReferenceFrame(marker_pose, ss.str());
   }
-  
+  cout<<endl;
   //3D vizualization
   /*
   //visualizer.addReferenceFrame(cam_pose, "origin");

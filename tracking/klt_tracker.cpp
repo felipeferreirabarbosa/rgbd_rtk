@@ -270,6 +270,7 @@ bool KLTTracker::track(Mat curr_frame)
 		{
 			//Detect new features, hold them and add them to the tracker in the next frame
 			detect_keypoints();
+			return true;
 		}
 	}
 
@@ -287,7 +288,7 @@ bool KLTTracker::track(Mat curr_frame)
 	cv::swap(curr_frame_gray_, prev_frame_gray_);
 	frame_idx_++;
 
-	return true;
+	return false;
 }
 
 void KLTTracker::initialize_logger(const string timing_file_name, const string tracking_file_name,
