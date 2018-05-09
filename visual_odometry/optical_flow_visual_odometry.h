@@ -64,7 +64,7 @@ public:
 	OpticalFlowVisualOdometry(const Intrinsics intr);
 
 	//Main member function: computes the current camera pose
-	void computeCameraPose(cv::Mat rgb, cv::Mat depth);
+	bool computeCameraPose(cv::Mat rgb, cv::Mat depth);
 };
 
 #endif /* INCLUDE_OPTICAL_FLOW_VISUAL_ODOMETRY_H_ */

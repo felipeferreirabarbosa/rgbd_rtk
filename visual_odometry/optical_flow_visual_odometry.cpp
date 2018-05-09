@@ -49,15 +49,17 @@ OpticalFlowVisualOdometry::OpticalFlowVisualOdometry(const Intrinsics intr)
 	curr_dense_cloud_ = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
 }
 
-void OpticalFlowVisualOdometry::computeCameraPose(cv::Mat rgb, cv::Mat depth)
+bool OpticalFlowVisualOdometry::computeCameraPose(cv::Mat rgb, cv::Mat depth)
 {
+	bool is_kf;
+	
 	Eigen::Affine3f trans = Eigen::Affine3f::Identity();
 
 	//Get dense point cloud from RGB-D data
 	*curr_dense_cloud_ = getPointCloud(rgb, depth, motion_estimator_.intr_);
 
 	//Track keypoints using KLT optical flow
-	tracker_.track(rgb);
+	is_kf = tracker_.track(rgb);
 
 	//Estimate motion between the current and the previous point clouds
 	if(frame_idx_ > 0)
@@ -72,4 +74,6 @@ void OpticalFlowVisualOdometry::computeCameraPose(cv::Mat rgb, cv::Mat depth)
 
 	//Increment the frame index
 	frame_idx_++;
+	
+	return is_kf;
 }
