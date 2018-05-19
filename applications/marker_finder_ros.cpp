@@ -1,4 +1,6 @@
 ///ROS
+#include "ros/ros.h"
+#include "std_msgs/String.h"
 #include <cstdio>
 #include <cstdlib>
 #include <ros/ros.h>
@@ -67,12 +69,20 @@ return P;
 }
 
 
+struct markerFound{
+  int id;
+  float x_pose;
+  float y_pose;
+  float z_pose;
+};
 
-
+string listen_id;
+int listen_to_int;
+markerFound all_markers[255];
 
 void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD);
 void rosMarkerFinder(cv::Mat rgb , cv::Mat depth);
-
+void listenCallback(const std_msgs::String::ConstPtr& msg);
 
 int main(int argc, char** argv){    
 
@@ -81,12 +91,17 @@ int main(int argc, char** argv){
   marker_detector.setDictionary("ARUCO_MIP_36h12", 0);
 
   //ROS steps
+  for(int k=0; k>=255; k++){
+    all_markers[k].id = 0;
+  }
 
-
-  ros::init(argc, argv, "image_converter");
+  ros::init(argc, argv, "marker_finder_ros");
   ros::start();
-  ros::NodeHandle nh;
 
+  ros::NodeHandle n;
+  ros::Subscriber sub = n.subscribe("chatter", 1000, listenCallback);
+  
+  ros::NodeHandle nh;
   message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 1);
   message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth/image_raw", 1);
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
@@ -141,8 +156,10 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
 
   
   for (size_t j = 0; j < markers.size(); j++){
+    //save all markers in a vetor 
+    all_markers[markers[j].id].id = markers[j].id;
     markers[j].draw(rgb, Scalar(0,0,255), 1);
-    // use to put names on ids cout<<markers[j].id<<" ";
+    //use to put names on ids cout<<markers[j].id<<" ";
     CvDrawingUtils::draw3dAxis(rgb, markers[j], camera_params);
     Eigen::Affine3f marker_pose = convertMarkerPoseToEigen(markers[j].Rvec, markers[j].Tvec);
     marker_pose = cam_pose*marker_pose;
@@ -150,7 +167,6 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
     ss << "m" << markers[j].id;
     //visualizer.viewReferenceFrame(marker_pose, ss.str());
   }
-  cout<<endl;
   //3D vizualization
   /*
   //visualizer.addReferenceFrame(cam_pose, "origin");
@@ -171,4 +187,18 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
   *prev_cloud = *curr_cloud;
 
   i++;
+}
+
+
+void listenCallback(const std_msgs::String::ConstPtr& msg){
+  listen_id = msg->data.c_str();
+  string::size_type sz; 
+  listen_to_int = stoi(listen_id,&sz);
+
+
+  if(all_markers[listen_to_int].id != 0)
+    ROS_INFO("[%s] is a valid marker", msg->data.c_str());
+
+  else 
+    ROS_INFO("[%s] is not a valid marker", msg->data.c_str());
 }

@@ -23,6 +23,10 @@ message(STATUS ">>> applications subdirectory")
 
 add_executable(motion_estimator_ros motion_estimator_ros.cpp)
 add_executable(marker_finder_ros marker_finder_ros.cpp)
+add_executable(bag_loader bag_loader.cpp)
+add_executable(listening_keyboard listening_keyboard.cpp)
+add_executable(keyboard_input keyboard_input.cpp)
+
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
@@ -39,8 +43,15 @@ target_link_libraries(motion_estimator_ros  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RG
 target_link_libraries(marker_finder_ros  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
                                              ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
                                              ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES} ${OpenCV_LIBS} ${aruco_LIBS})
+target_link_libraries(bag_loader   ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(listening_keyboard  ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(keyboard_input  ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
 
 
 install(TARGETS motion_estimator_ros
 		marker_finder_ros
+		bag_loader
+		listening_keyboard
+		keyboard_input
         RUNTIME DESTINATION bin)
