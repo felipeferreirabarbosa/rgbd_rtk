@@ -22,10 +22,12 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   roscpp
-  roscpp
   rospy
   sensor_msgs
   std_msgs
+  move_base_msgs
+  actionlib
+
 )
 
 ##rtk

@@ -1,90 +1,64 @@
-///ROS
-#include "ros/ros.h"
-#include "std_msgs/String.h"
 #include <cstdio>
 #include <cstdlib>
+///ROS
+#include <move_base_msgs/MoveBaseAction.h>
+#include <actionlib/client/simple_action_client.h>
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include <cv_bridge/cv_bridge.h>
 #include <ros/ros.h>
-#include <sstream>
 #include <image_transport/image_transport.h>
 #include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/image_encodings.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/time_synchronizer.h>
+#include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
 ///Opencv
-#include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
 //Aruco
 #include <aruco/aruco.h>
 #include <aruco/cvdrawingutils.h>
-//Eigen
-#include <Eigen/Geometry>
-//Our includes
-#include <geometry.h>
-#include <rgbd_loader.h>
-#include <klt_tracker.h>
-#include <motion_estimator_ransac.h>
-#include <reconstruction_visualizer.h>
+
 
 
 using namespace std;
 using namespace cv;
 using namespace aruco;
 
-KLTTracker tracker;
-Intrinsics intr(0);
-MotionEstimatorRANSAC motion_estimator(intr);
-//ReconstructionVisualizer visualizer;
-//eigen
-Eigen::Affine3f cam_pose = Eigen::Affine3f::Identity();
-Eigen::Affine3f trans = Eigen::Affine3f::Identity();
-//pcl
-pcl::PointCloud<PointT>::Ptr prev_cloud(new pcl::PointCloud<PointT>);
-pcl::PointCloud<PointT>::Ptr curr_cloud(new pcl::PointCloud<PointT>);
+
 //aruco
 MarkerDetector marker_detector;
 CameraParameters camera_params;
 vector<Marker> markers;
 float marker_size;
-bool key_frame;
 
 int i=0;
-
-   
-Eigen::Affine3f convertMarkerPoseToEigen(const Mat Rvec, const Mat Tvec){
-Mat R = Mat::eye(3, 3, CV_32FC1);
-Eigen::Affine3f P = Eigen::Affine3f::Identity();
-
-Rodrigues(Rvec, R);
-
-P(0,0) = R.at<float>(0,0); P(0,1) = R.at<float>(0,1); P(0,2) = R.at<float>(0,2);
-P(1,0) = R.at<float>(1,0); P(1,1) = R.at<float>(1,1); P(1,2) = R.at<float>(1,2);
-P(2,0) = R.at<float>(2,0); P(2,1) = R.at<float>(2,1); P(2,2) = R.at<float>(2,2);
-P(0,3) = Tvec.at<float>(0,0); P(1,3) = Tvec.at<float>(1,0); P(2,3) = Tvec.at<float>(2,0);
-
-return P;
-}
 
 
 struct markerFound{
   int id;
-  float x_pose;
-  float y_pose;
-  float z_pose;
+  double x_pose;
+  double y_pose;
+  double z_pose;
 };
 
 string listen_id;
-int listen_to_int;
+int listen_id_to_int;
 markerFound all_markers[255];
 
-void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD);
-void rosMarkerFinder(cv::Mat rgb , cv::Mat depth);
-void listenCallback(const std_msgs::String::ConstPtr& msg);
+void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD); // listening rgbd sensor 
+void rosMarkerFinder(cv::Mat rgb , cv::Mat depth); //marker finder
+void listenCallback(const std_msgs::String::ConstPtr& msg); //listening keyboard input for navigation
+bool goalReached = false;
+bool moveToGoal(double xGoal, double yGoal); //moving autonomous to a place
+
 
 int main(int argc, char** argv){    
+  if(argc != 3)
+  {
+    fprintf(stderr, "Usage: %s <camera calibration file> <marker size>\n", argv[0]);
+    exit(0);
+  }
 
   camera_params.readFromXMLFile(argv[1]);
   marker_size = stof(argv[2]);
@@ -139,21 +113,8 @@ void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageC
 
 void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
 
-  *curr_cloud = getPointCloud(rgb, depth, intr);
-
-  //Track feature points in the current frame
-  key_frame=tracker.track(rgb);
-  //Estimate motion between the current and the previous frame/point clouds
-
-  if(i > 0){
-    trans = motion_estimator.estimate(tracker.prev_pts_, prev_cloud, tracker.curr_pts_, curr_cloud);
-    cam_pose = cam_pose*trans;
-  }
-
   //Detect and view Aruco markers
   marker_detector.detect(rgb, markers, camera_params, marker_size); 
-
-
   
   for (size_t j = 0; j < markers.size(); j++){
     //save all markers in a vetor 
@@ -161,30 +122,14 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
     markers[j].draw(rgb, Scalar(0,0,255), 1);
     //use to put names on ids cout<<markers[j].id<<" ";
     CvDrawingUtils::draw3dAxis(rgb, markers[j], camera_params);
-    Eigen::Affine3f marker_pose = convertMarkerPoseToEigen(markers[j].Rvec, markers[j].Tvec);
-    marker_pose = cam_pose*marker_pose;
     stringstream ss;
     ss << "m" << markers[j].id;
-    //visualizer.viewReferenceFrame(marker_pose, ss.str());
   }
-  //3D vizualization
-  /*
-  //visualizer.addReferenceFrame(cam_pose, "origin");
-  
-  if(key_frame == true){
-    visualizer.addQuantizedPointCloud(curr_cloud, 0.05, cam_pose);
-    visualizer.viewReferenceFrame(cam_pose);
-    visualizer.viewPointCloud(curr_cloud, cam_pose);
-    visualizer.viewQuantizedPointCloud(curr_cloud, 0.02, cam_pose);
-  }
-  visualizer.spinOnce();
-  */
-  depth = depth/5;
-  cv::imshow("OPENCV_WINDOW_DEPTH", rgb);
-  cv::imshow("OPENCV_WINDOW", depth);
-  cv::waitKey(1);
 
-  *prev_cloud = *curr_cloud;
+  depth = depth/5;
+  cv::imshow("OPENCV_WINDOW", rgb);
+  cv::imshow("OPENCV_WINDOW_DEPTH", depth);
+  cv::waitKey(1);
 
   i++;
 }
@@ -193,12 +138,56 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
 void listenCallback(const std_msgs::String::ConstPtr& msg){
   listen_id = msg->data.c_str();
   string::size_type sz; 
-  listen_to_int = stoi(listen_id,&sz);
+  //converting string to int
+  listen_id_to_int = stoi(listen_id,&sz);
 
-
-  if(all_markers[listen_to_int].id != 0)
+  //validing a marker(a merker is valid if it was detected in any frame)
+  if(all_markers[listen_id_to_int].id != 0){
     ROS_INFO("[%s] is a valid marker", msg->data.c_str());
+    moveToGoal(all_markers[listen_id_to_int].x_pose, all_markers[listen_id_to_int].y_pose);
+  }
 
   else 
     ROS_INFO("[%s] is not a valid marker", msg->data.c_str());
+}
+bool moveToGoal(double xGoal, double yGoal){
+
+   //define a client for to send goal requests to the move_base server through a SimpleActionClient
+   actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);
+
+   //wait for the action server to come up
+   while(!ac.waitForServer(ros::Duration(5.0))){
+      ROS_INFO("Waiting for the move_base action server to come up");
+   }
+
+   move_base_msgs::MoveBaseGoal goal;
+
+   //set up the frame parameters
+   goal.target_pose.header.frame_id = "map";
+   goal.target_pose.header.stamp = ros::Time::now();
+
+   /* moving towards the goal*/
+
+   goal.target_pose.pose.position.x =  xGoal;
+   goal.target_pose.pose.position.y =  yGoal;
+   goal.target_pose.pose.position.z =  0.0;
+   goal.target_pose.pose.orientation.x = 0.0;
+   goal.target_pose.pose.orientation.y = 0.0;
+   goal.target_pose.pose.orientation.z = 0.0;
+   goal.target_pose.pose.orientation.w = 1.0;
+
+   ROS_INFO("Sending goal location ...");
+   ac.sendGoal(goal);
+
+   ac.waitForResult();
+
+   if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED){
+      ROS_INFO("You have reached the destination");
+      return true;
+   }
+   else{
+      ROS_INFO("The robot failed to reach the destination");
+      return false;
+   }
+
 }

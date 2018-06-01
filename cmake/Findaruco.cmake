@@ -25,10 +25,10 @@ SET(aruco_INCLUDE_DIRS "/usr/local/include")
 LINK_DIRECTORIES("/usr/local/lib")
 SET(aruco_LIB_DIR "/usr/local/lib")
 
-SET(aruco_LIBS opencv_videostab;opencv_video;opencv_ts;opencv_superres;opencv_stitching;opencv_photo;opencv_ocl;opencv_objdetect;opencv_nonfree;opencv_ml;opencv_legacy;opencv_imgproc;opencv_highgui;opencv_gpu;opencv_flann;opencv_features2d;opencv_core;opencv_contrib;opencv_calib3d aruco)
+SET(aruco_LIBS opencv_calib3d;opencv_core;opencv_dnn;opencv_features2d;opencv_flann;opencv_highgui;opencv_imgcodecs;opencv_imgproc;opencv_ml;opencv_objdetect;opencv_photo;opencv_shape;opencv_stitching;opencv_superres;opencv_video;opencv_videoio;opencv_videostab;opencv_viz aruco)
 
 SET(aruco_FOUND 1)
-SET(aruco_VERSION        2.0.19)
+SET(aruco_VERSION        2.0.14)
 SET(aruco_VERSION_MAJOR  2)
 SET(aruco_VERSION_MINOR  0)
 SET(aruco_VERSION_PATCH  1)
