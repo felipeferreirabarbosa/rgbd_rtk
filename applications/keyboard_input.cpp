@@ -22,15 +22,18 @@ int main(int argc, char **argv)
   
     std_msgs::String msg;
     std::stringstream ss;
+
+    printf("For send a goal to a marker ID use : (E.g ID 55) '55'(no quotation markes)\n");
+    printf("For save all markers use 's'(no quotation markers)\n");
+    printf("For exit use 'q'(no quotation markers");
     cout<<"Insira a ID\n";
     getline(cin, id_marker);
-    cout << "You entered: " << id_marker << endl;
     ss << id_marker;
     msg.data = ss.str();
 
-    ROS_INFO("%s", msg.data.c_str());
+    ROS_INFO("%s\n\n\n\n\n", msg.data.c_str());
 
- 
+    
     chatter_pub.publish(msg);
 
     ros::spinOnce();

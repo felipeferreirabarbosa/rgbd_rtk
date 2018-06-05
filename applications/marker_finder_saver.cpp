@@ -50,15 +50,28 @@ markerFound all_markers[255];
 
 void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD); // listening rgbd sensor 
 void rosMarkerFinder(cv::Mat rgb , cv::Mat depth); //marker finder
+void listenKeyboardSave(const std_msgs::String::ConstPtr& msg); //listening keyboard input for navigation
 
 
 int main(int argc, char** argv){    
 
-   if(argc != 3)
-  {
-    fprintf(stderr, "Usage: %s <camera calibration file> <marker size>\n", argv[0]);
+  string rgb_topic,depth_topic;
+  rgb_topic = "camera/rgb/image_raw";
+  depth_topic = "camera/depth/image_raw";
+  if(argc != 5 && argc !=3){
+    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> optional: <rgb_topic> <depth_topic>....bye default : camera/rgb/image_raw and camera/depth/image_raw\n", argv[0]);
     exit(0);
   }
+  if(argc == 3){
+    printf(" By defult using camera/rgb/image_raw and camera/depth/image_raw as ros topics\n");  
+  }
+   if(argc == 5){
+     rgb_topic = argv[3];
+     depth_topic = argv[4];  
+  }
+ 
+
+      
 
   camera_params.readFromXMLFile(argv[1]);
   marker_size = stof(argv[2]);
@@ -71,10 +84,13 @@ int main(int argc, char** argv){
 
   ros::init(argc, argv, "marker_finder_ros");
   ros::start();
+
+  ros::NodeHandle n;
+  ros::Subscriber sub = n.subscribe("chatter", 1000, listenKeyboardSave);
   
   ros::NodeHandle nh;
-  message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 1);
-  message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth/image_raw", 1);
+  message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, rgb_topic, 1);
+  message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, depth_topic, 1);
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
   //ApproximateTime takes a queue size as its constructor argument, hence MySyncPolicy(10)
   message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), rgb_sub,depth_sub);
@@ -83,12 +99,7 @@ int main(int argc, char** argv){
   ros::spin();
 
 
-  ofstream arq;
-  arq.open("all_markers.txt");
-  for(int k=0; k<=255; k++){
-    if(all_markers[k].id==0) continue;
-      arq<<all_markers[k].id<<endl;
-  }
+
   return 0;
  }
 
@@ -138,4 +149,18 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
   i++;
 }
 
+void listenKeyboardSave(const std_msgs::String::ConstPtr& msg){
+  string listen = msg->data.c_str();
 
+  if(listen.compare("s") == 0){
+    cout<<"entrou";
+    ofstream arq;
+    arq.open("all_markers.txt");
+    for(int k=0; k<=254; k++){
+      if(all_markers[k].id==0) continue;
+        arq<<all_markers[k].id<<endl;
+    }
+  }
+  else 
+    ROS_INFO("[%s] is not a valid input, use 's' to save all markers", msg->data.c_str());
+}
