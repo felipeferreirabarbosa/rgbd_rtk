@@ -12,6 +12,8 @@ Requirements
 
 - OpenCV: www.opencv.org  (version >= 3.X)
 - PCL: www.pointclouds.org (version 1.8)
+- ROS: http://www.ros.org (version Kinetic)
+- Aruco: https://sourceforge.net/projects/aruco/files/OldVersions/(version 2.0.14)
 
 It is recommended to install both dependencies from source. The following two links will redirect you to their official tutorials to do so.
 
@@ -19,42 +21,19 @@ It is recommended to install both dependencies from source. The following two li
 
 > [Compiling PCL from source on Linux](http://pointclouds.org/documentation/tutorials/compiling_pcl_posix.php)
 
+>[Install ROS on Linux](http://wiki.ros.org/kinetic/Installation)
+
+>[Create a catkin workspace](http://wiki.ros.org/catkin/Tutorials/create_a_workspace)
+
 Building
 ------------
 
-First, get the newest version of this repository by using the follwing command on your working directory.
+- Create a new path in "~catkin_ws/src" and copy everything to this path.
+- In path "CMAKE" change file "Findaruco.cmake" to your file Findaruco.cmake, this file can be found in your building Aruco path
+- In path catkin_ws 
 
 ```bash
-cd /my_working _directory 
-```
-
-```bash
-git clone https://github.com/natalnet-lpr/rgbd_rtk.git
-```
-
-Create a directory called build, and change directory to it.
-
-```bash
-mkdir build
-``` 
-```bash
-cd build/
-```
-
-Inside of the build directory, run the cmake command so that it will create the necessary makefiles.
-
-```bash
-cmake ..
-```
-
-Then, compile the rgbt_rtk by using the make command. The -j4 is optional but it is recommended. With it your code will be compiled in 4 parallel tasks.
-
-```bash
-make -j4
-```
-
-```bash
-sudo make install
+catkin_make
 ```
 
 License
@@ -68,5 +47,6 @@ Authors
 
 Natalnet Laboratory for Perceptual Robotics, Federal University of Rio Grande do Norte, Brazil.
 
+Contact: rodrigosarmento rodrigosarmentox@gmail.com
 Contact: bruno.silva AT ect.ufrn.br
 
