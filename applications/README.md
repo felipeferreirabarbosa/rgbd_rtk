@@ -107,8 +107,7 @@ by default it will use "camera/rgb/image_raw", if you want to use an equivalente
 autonomous_robot.cpp will wait for an id marker or a goal to move autonomous and avoiding obstacles, to send the goal use 
 "goal.cpp" and to send to a marker use "keyboard.cpp"
 
-Autonomous Robot needs two ros topics to work rgb and depth topic, by default it will use "camera/rgb/image_raw" and "camera/depth/image_raw",
-if you want to use an equivalente topic just type when launch the program as "./Autonomous Robot camera/rgb/image_color camera/depth/image.
+by default it will use "camera/rgb/image_raw", if you want to use an equivalente topic just type when launch the program as "./motion_estimator camera/rgb/image_color
 
 - Motion estimator ros
 
@@ -132,8 +131,6 @@ goal.cpp will send a goal to turtlebot moves to a x,y position
 
 Keyboard_input.cpp save all markers id and positions that were saw in any frame when mapping, and in localization sends a goal to move to a marker id.
 
-- Listening keyboard
 
-listening_Keyboard.cpp listen to a string
  
 

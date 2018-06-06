@@ -6,9 +6,6 @@
 /** function declarations **/
 bool moveToGoal(double xGoal, double yGoal);
 
-/** declare the coordinates of interest **/
-double x = -0.4;
-double y = 0.50;
 
 bool goalReached = false;
 
@@ -16,7 +13,11 @@ int main(int argc, char** argv){
    ros::init(argc, argv, "map_navigation_node");
    ros::spinOnce();
 
-   moveToGoal(x, y);
+   cout <<  "Insirt x and y positions\n";
+   cin>>x>>y;
+
+   moveToGoal(x, y); //declare the coordinates of interest 
+
    
    return 0;
 }

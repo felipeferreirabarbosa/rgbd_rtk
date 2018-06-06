@@ -36,7 +36,7 @@ float marker_size;
 
 int i=0;
 
-
+//where markers id and poses will be saved
 struct markerFound{
   int id;
   double x_pose;
@@ -48,64 +48,49 @@ string listen_id;
 int listen_id_to_int;
 markerFound all_markers[255];
 
-void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD); // listening rgbd sensor 
-void rosMarkerFinder(cv::Mat rgb , cv::Mat depth); //marker finder
+void imageCallback(const sensor_msgs::ImageConstPtr& msg); //subscribe to rgb image
+void markerFinder(cv::Mat rgb); //marker finder
 void listenKeyboardSave(const std_msgs::String::ConstPtr& msg); //listening keyboard input for navigation
 
 
 int main(int argc, char** argv){    
-
-  string rgb_topic,depth_topic;
+  string rgb_topic;
   rgb_topic = "camera/rgb/image_raw";
-  depth_topic = "camera/depth/image_raw";
-  if(argc != 5 && argc !=3){
-    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> optional: <rgb_topic> <depth_topic>....bye default : camera/rgb/image_raw and camera/depth/image_raw\n", argv[0]);
+  if(argc != 4 && argc !=3){
+    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> optional: <rgb_topic> ....bye default : camera/rgb/image_raw \n", argv[0]);
     exit(0);
   }
   if(argc == 3){
-    printf(" By defult using camera/rgb/image_raw and camera/depth/image_raw as ros topics\n");  
+    printf(" By defult using camera/rgb/image_raw as ros topic\n");  
   }
-   if(argc == 5){
+   if(argc == 4){
      rgb_topic = argv[3];
-     depth_topic = argv[4];  
   }
- 
-
-      
-
-  camera_params.readFromXMLFile(argv[1]);
+  camera_params.readFromXMLFile(argv[1]);    //aruco params 
   marker_size = stof(argv[2]);
   marker_detector.setDictionary("ARUCO_MIP_36h12", 0);
 
-  //ROS steps
-  for(int k=0; k<=254; k++){
+  
+  for(int k=0; k<=254; k++){ //initializing markers
     all_markers[k].id = 0;
   }
 
-  ros::init(argc, argv, "marker_finder_ros");
+  ros::init(argc, argv, "marker_finder_ros");    //starting ros
   ros::start();
 
   ros::NodeHandle n;
-  ros::Subscriber sub = n.subscribe("chatter", 1000, listenKeyboardSave);
-  
+  ros::Subscriber sub = n.subscribe("chatter", 1000, listenKeyboardSave);    //subscribing to string msg 
+
   ros::NodeHandle nh;
-  message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, rgb_topic, 1);
-  message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, depth_topic, 1);
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
-  //ApproximateTime takes a queue size as its constructor argument, hence MySyncPolicy(10)
-  message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), rgb_sub,depth_sub);
-  sync.registerCallback(boost::bind(&callback, _1, _2));
+  image_transport::ImageTransport it(nh);
+  image_transport::Subscriber rgb_sub = it.subscribe(rgb_topic, 1, imageCallback);    //subscribing to rgb image
 
-  ros::spin();
-
-
+  ros::spin();  //"while true"
 
   return 0;
  }
 
-void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD){
-
-  // Copy the ros image message to cv::Mat.
+void imageCallback(const sensor_msgs::ImageConstPtr& msgRGB){
   cv_bridge::CvImageConstPtr cv_ptrRGB;
   try{
       cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
@@ -115,35 +100,22 @@ void callback(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageC
     return;
   }
 
-  cv_bridge::CvImageConstPtr cv_ptrD;
-  try{
-    cv_ptrD = cv_bridge::toCvShare(msgD);
-  }
-  catch (cv_bridge::Exception& e){
-    ROS_ERROR("cv_bridge exception: %s", e.what());
-    return;
-  }
-  rosMarkerFinder(cv_ptrRGB->image, cv_ptrD->image);
+  markerFinder(cv_ptrRGB->image); //calling marker finder funcition
 }
 
-void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
+void markerFinder(cv::Mat rgb ){
 
-  //Detect and view Aruco markers
-  marker_detector.detect(rgb, markers, camera_params, marker_size); 
+  marker_detector.detect(rgb, markers, camera_params, marker_size);   //Detect and view Aruco markers
 
   for (size_t j = 0; j < markers.size(); j++){
-    //save all markers in a vetor 
-    all_markers[markers[j].id].id = markers[j].id;
-    markers[j].draw(rgb, Scalar(0,0,255), 1);
-    //use to put names on ids cout<<markers[j].id<<" ";
+    all_markers[markers[j].id].id = markers[j].id;     //save all markers in a vetor 
+    markers[j].draw(rgb, Scalar(0,0,255), 1);   //drawing markers in rgb image
     CvDrawingUtils::draw3dAxis(rgb, markers[j], camera_params);
     stringstream ss;
     ss << "m" << markers[j].id;
   }
    
-  depth = depth/5;
-  cv::imshow("OPENCV_WINDOW", rgb);
-  cv::imshow("OPENCV_WINDOW_DEPTH", depth);
+  cv::imshow("OPENCV_WINDOW", rgb);  //showing rgb image
   cv::waitKey(1);
 
   i++;
@@ -152,13 +124,12 @@ void rosMarkerFinder(cv::Mat rgb , cv::Mat depth){
 void listenKeyboardSave(const std_msgs::String::ConstPtr& msg){
   string listen = msg->data.c_str();
 
-  if(listen.compare("s") == 0){
-    cout<<"entrou";
+  if(listen.compare("s") == 0){  //validing if string msg wants to save markers
     ofstream arq;
     arq.open("all_markers.txt");
     for(int k=0; k<=254; k++){
       if(all_markers[k].id==0) continue;
-        arq<<all_markers[k].id<<endl;
+        arq<<all_markers[k].id<<endl;   //saving all markers in "all_markers.txt"
     }
   }
   else 
