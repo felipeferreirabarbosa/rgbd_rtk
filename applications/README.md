@@ -97,14 +97,13 @@ All programs explanation
 
 - Marker Finder Saver
 
-marker_finder_saver.cpp will find markers and save it id and position, it needs camera parameters, markers size and a ros rgb topic.
+marker_finder_saver.cpp will find markers and save it id and position, it needs camera parameters, markers size, 'marker_saver.txt' and a ros rgb topic.
 To save all markers for use after, use the program "keyboard_input" and type s.
 
 by default it will use "camera/rgb/image_raw", if you want to use an equivalente topic just type when launch the program as "./motion_estimator camera/rgb/image_color
 
-- Autonomous Robot
-
-autonomous_robot.cpp will wait for an id marker or a goal to move autonomous and avoiding obstacles, to send the goal use 
+- Autonomous Robot it needs camera parameters, markers size, 'marker_saver.txt'(from marker_finder_saver.cpp). Autonomous_robot.cpp 
+will wait for an id marker or a goal to move autonomous and avoiding obstacles, to send the goal use 
 "goal.cpp" and to send to a marker use "keyboard.cpp"
 
 by default it will use "camera/rgb/image_raw", if you want to use an equivalente topic just type when launch the program as "./motion_estimator camera/rgb/image_color
@@ -131,6 +130,8 @@ goal.cpp will send a goal to turtlebot moves to a x,y position
 
 Keyboard_input.cpp save all markers id and positions that were saw in any frame when mapping, and in localization sends a goal to move to a marker id.
 
+
+ 
 
  
 

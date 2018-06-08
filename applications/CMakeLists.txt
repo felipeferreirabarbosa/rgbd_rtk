@@ -30,6 +30,7 @@ add_executable(keyboard_input keyboard_input.cpp)
 
 
 
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 find_library(RGBD_RTK_IO NAMES rgbd_rtk_io)
@@ -39,20 +40,21 @@ find_library(RGBD_RTK_VISUALIZATION NAMES rgbd_rtk_visualization)
 find_library(RGBD_RTK_MOTION_ESTIMATION NAMES rgbd_rtk_motion_estimation)
 
 
-target_link_libraries(autonomous_robot  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
+target_link_libraries(autonomous_robot  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING} ${RGBD_RTK_SLAM}
                                              ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
                                              ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES}
  ${OpenCV_LIBS} ${aruco_LIBS})
 target_link_libraries(goal  ${catkin_LIBRARIES} ${OpenCV_LIBS})
 target_link_libraries(marker_finder_saver  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
                                              ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
-                                             ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES}
+                                             ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES}  ${RGBD_RTK_SLAM}
  ${OpenCV_LIBS} ${aruco_LIBS})
 target_link_libraries(motion_estimator_ros  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
                                              ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
                                              ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES} ${OpenCV_LIBS})
 target_link_libraries(bag_loader   ${catkin_LIBRARIES} ${OpenCV_LIBS})
 target_link_libraries(keyboard_input  ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
 
 
 

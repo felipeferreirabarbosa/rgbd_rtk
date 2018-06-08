@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 ///ROS
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
@@ -37,9 +38,9 @@ int i=0;
 
 struct markerFound{
   int id;
-  double x_pose;
-  double y_pose;
-  double z_pose;
+  float x_pose;
+  float y_pose;
+  float z_pose;
 };
 
 string listen_id;
@@ -51,25 +52,28 @@ void markerFinder(cv::Mat rgb); //marker finder
 void listenKeyboardGoal(const std_msgs::String::ConstPtr& msg); //listening keyboard input for navigation
 bool goalReached = false;
 bool moveToGoal(double xGoal, double yGoal); //moving autonomous to a place
+void loadMarkers(string saved_markers); //open all_markers.txt
 
 
 int main(int argc, char** argv){    
   
   string rgb_topic;
   rgb_topic = "camera/rgb/image_raw";
-  if(argc != 4 && argc !=3){
-    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> optional: <rgb_topic> ....bye default : camera/rgb/image_raw \n", argv[0]);
+  if(argc != 5 && argc !=4){
+    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> <all_markers.txt> optional: <rgb_topic> ....bye default : camera/rgb/image_raw \n", argv[0]);
     exit(0);
   }
-  if(argc == 3){
+  if(argc == 4){
     printf(" By defult using camera/rgb/image_raw as ros topic\n");  
   }
-   if(argc == 4){
-     rgb_topic = argv[3];
+   if(argc == 5){
+     rgb_topic = argv[4];
   }
 
   camera_params.readFromXMLFile(argv[1]);    //aruco params 
   marker_size = stof(argv[2]);
+  loadMarkers(argv[3]);//loading markers
+
   marker_detector.setDictionary("ARUCO_MIP_36h12", 0);
 
   for(int k=0; k<=254; k++){ //initializing markers
@@ -92,6 +96,7 @@ int main(int argc, char** argv){
  }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msgRGB){
+  
   cv_bridge::CvImageConstPtr cv_ptrRGB;
   try{
       cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
@@ -109,7 +114,6 @@ void markerFinder(cv::Mat rgb ){
   marker_detector.detect(rgb, markers, camera_params, marker_size);   //Detect and view Aruco markers
 
   for (size_t j = 0; j < markers.size(); j++){
-    all_markers[markers[j].id].id = markers[j].id;     //save all markers in a vetor 
     markers[j].draw(rgb, Scalar(0,0,255), 1);   //drawing markers in rgb image
     CvDrawingUtils::draw3dAxis(rgb, markers[j], camera_params);
     stringstream ss;
@@ -122,8 +126,8 @@ void markerFinder(cv::Mat rgb ){
   i++;
 }
 
-
 void listenKeyboardGoal(const std_msgs::String::ConstPtr& msg){
+  
   listen_id = msg->data.c_str();
   string::size_type sz; 
 
@@ -137,6 +141,7 @@ void listenKeyboardGoal(const std_msgs::String::ConstPtr& msg){
   else 
     ROS_INFO("[%s] is not a valid marker", msg->data.c_str());
 }
+
 bool moveToGoal(double xGoal, double yGoal){
 
    actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);    //define a client for to send goal requests to the move_base server through a SimpleActionClient
@@ -174,5 +179,20 @@ bool moveToGoal(double xGoal, double yGoal){
       ROS_INFO("The robot failed to reach the destination");
       return false;
    }
+}
 
+void loadMarkers(string saved_markers){
+  int markers_number = 0, id = 0;
+  float x = 0, y = 0;
+  fstream arq;
+  arq.open(saved_markers);//open .txt
+  arq >> markers_number;
+
+  //saving markers information in vector "all_markers"
+  for(int i = 0; i <= markers_number; i++){
+    arq >> id >> x >> y;
+    all_markers[id].id = id;
+    all_markers[id].x_pose = x;
+    all_markers[id].y_pose = y;
+  }
 }

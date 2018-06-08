@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <vector>
 ///ROS
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
@@ -14,63 +15,63 @@
 #include <message_filters/time_synchronizer.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
+#include "nav_msgs/Odometry.h"
 ///Opencv
 #include <opencv2/highgui/highgui.hpp>
 //Aruco
-#include <aruco/aruco.h>
-#include <aruco/cvdrawingutils.h>
-
-
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
+#include <marker_finder.h>
 
 using namespace std;
 using namespace cv;
 using namespace aruco;
 
-
 //aruco
-MarkerDetector marker_detector;
-CameraParameters camera_params;
-vector<Marker> markers;
 float marker_size;
+MarkerFinder marker_finder; 
 
-
+Eigen::Affine3f turtle_trans; //turtlebot pose
 int i=0;
 
 //where markers id and poses will be saved
 struct markerFound{
   int id;
-  double x_pose;
-  double y_pose;
-  double z_pose;
+  float x_pose;
+  float y_pose;
+  float z_pose;
 };
-
-string listen_id;
-int listen_id_to_int;
 markerFound all_markers[255];
 
+//for keyboard
+string listen_id;
+int listen_id_to_int;
+string all_markers_saved; 
+
 void imageCallback(const sensor_msgs::ImageConstPtr& msg); //subscribe to rgb image
-void markerFinder(cv::Mat rgb); //marker finder
+void rosMarkerFinder(cv::Mat rgb); //marker finder
 void listenKeyboardSave(const std_msgs::String::ConstPtr& msg); //listening keyboard input for navigation
+void odomCallback(const nav_msgs::Odometry::ConstPtr& msg); //subscribe turtlebot odometry
 
+int main(int argc, char** argv){  
 
-int main(int argc, char** argv){    
   string rgb_topic;
   rgb_topic = "camera/rgb/image_raw";
-  if(argc != 4 && argc !=3){
-    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> optional: <rgb_topic> ....bye default : camera/rgb/image_raw \n", argv[0]);
+  if(argc != 5 && argc !=4){
+    fprintf(stderr, "Usage: %s <camera calibration file> <marker size> <save where markes will be saved> optional: <rgb_topic> ....bye default : camera/rgb/image_raw \n", argv[0]);
     exit(0);
   }
-  if(argc == 3){
+  if(argc == 4){
     printf(" By defult using camera/rgb/image_raw as ros topic\n");  
   }
-   if(argc == 4){
-     rgb_topic = argv[3];
+   if(argc == 5){
+     rgb_topic = argv[4];
   }
-  camera_params.readFromXMLFile(argv[1]);    //aruco params 
-  marker_size = stof(argv[2]);
-  marker_detector.setDictionary("ARUCO_MIP_36h12", 0);
-
   
+  marker_size = stof(argv[2]);
+  all_markers_saved = argv[3];
+  marker_finder.markerParam(argv[1] , marker_size);
+
   for(int k=0; k<=254; k++){ //initializing markers
     all_markers[k].id = 0;
   }
@@ -84,6 +85,9 @@ int main(int argc, char** argv){
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
   image_transport::Subscriber rgb_sub = it.subscribe(rgb_topic, 1, imageCallback);    //subscribing to rgb image
+  
+  ros::NodeHandle nn;
+  ros::Subscriber odom_sub = nn.subscribe("odom", 1000, odomCallback);
 
   ros::spin();  //"while true"
 
@@ -91,6 +95,7 @@ int main(int argc, char** argv){
  }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msgRGB){
+  
   cv_bridge::CvImageConstPtr cv_ptrRGB;
   try{
       cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
@@ -100,19 +105,22 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msgRGB){
     return;
   }
 
-  markerFinder(cv_ptrRGB->image); //calling marker finder funcition
+  rosMarkerFinder(cv_ptrRGB->image); //calling marker finder funcition
 }
 
-void markerFinder(cv::Mat rgb ){
+void rosMarkerFinder(cv::Mat rgb){
 
-  marker_detector.detect(rgb, markers, camera_params, marker_size);   //Detect and view Aruco markers
+  marker_finder.detectMarkers(rgb, turtle_trans);   //Detect and get pose of all aruco markers
 
-  for (size_t j = 0; j < markers.size(); j++){
-    all_markers[markers[j].id].id = markers[j].id;     //save all markers in a vetor 
-    markers[j].draw(rgb, Scalar(0,0,255), 1);   //drawing markers in rgb image
-    CvDrawingUtils::draw3dAxis(rgb, markers[j], camera_params);
+  for (size_t j = 0; j < marker_finder.markers_.size(); j++){
+    all_markers[marker_finder.markers_[j].id].id = marker_finder.markers_[j].id;     //save all markers in a vetor 
+    all_markers[marker_finder.markers_[j].id].x_pose = marker_finder.marker_poses_[j](0,3); //save marker position 
+    all_markers[marker_finder.markers_[j].id].y_pose = marker_finder.marker_poses_[j](1,3);
+    all_markers[marker_finder.markers_[j].id].y_pose = marker_finder.marker_poses_[j](2,3);
+    marker_finder.markers_[j].draw(rgb, Scalar(0,0,255), 1);   //drawing markers in rgb image
+    CvDrawingUtils::draw3dAxis(rgb, marker_finder.markers_[j], marker_finder.camera_params_);
     stringstream ss;
-    ss << "m" << markers[j].id;
+    ss << "m" << marker_finder.markers_[j].id;
   }
    
   cv::imshow("OPENCV_WINDOW", rgb);  //showing rgb image
@@ -122,16 +130,41 @@ void markerFinder(cv::Mat rgb ){
 }
 
 void listenKeyboardSave(const std_msgs::String::ConstPtr& msg){
+  
   string listen = msg->data.c_str();
-
+  int cont=0;
   if(listen.compare("s") == 0){  //validing if string msg wants to save markers
     ofstream arq;
-    arq.open("all_markers.txt");
+    arq.open(all_markers_saved);
     for(int k=0; k<=254; k++){
       if(all_markers[k].id==0) continue;
-        arq<<all_markers[k].id<<endl;   //saving all markers in "all_markers.txt"
+        cont ++;
+    }
+    for(int k=0; k<=254; k++){
+      if(all_markers[k].id==0) continue;
+        arq<<cont<<endl<<all_markers[k].id<<" "<<all_markers[k].x_pose<<" "<<all_markers[k].y_pose <<endl;   //saving all markers in "all_markers.txt"
     }
   }
   else 
     ROS_INFO("[%s] is not a valid input, use 's' to save all markers", msg->data.c_str());
+}
+
+void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
+
+  Eigen::Vector3f v(msg->pose.pose.position.x,msg->pose.pose.position.y,msg->pose.pose.position.z); //subscribing turtlebot pose 
+  Eigen::Quaternionf q(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z); ///subscribing turtlebot orientation pose 
+
+  q.normalize();
+
+  Eigen::Matrix3f R = q.toRotationMatrix();   // convert a quaternion to a 3x3 rotation matrix:
+  
+  Eigen::Matrix4f Trans;
+  Trans.setIdentity();   // Set to Identity 
+  Trans.block<3,3>(0,0) = R; 
+  Trans.block<3,1>(0,3) = v;
+  turtle_trans = Trans;
+
+  ROS_INFO("Position-> x: [%f], y: [%f], z: [%f]", msg->pose.pose.position.x,msg->pose.pose.position.y, msg->pose.pose.position.z);
+  ROS_INFO("Orientation-> x: [%f], y: [%f], z: [%f], w: [%f]", msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
+  //ROS_INFO("Vel-> Linear: [%f], Angular: [%f]", msg->twist.twist.linear.x,msg->twist.twist.angular.z);
 }
