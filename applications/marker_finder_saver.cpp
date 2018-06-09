@@ -140,9 +140,10 @@ void listenKeyboardSave(const std_msgs::String::ConstPtr& msg){
       if(all_markers[k].id==0) continue;
         cont ++;
     }
+    arq<<cont<<endl;
     for(int k=0; k<=254; k++){
       if(all_markers[k].id==0) continue;
-        arq<<cont<<endl<<all_markers[k].id<<" "<<all_markers[k].x_pose<<" "<<all_markers[k].y_pose <<endl;   //saving all markers in "all_markers.txt"
+        arq<<all_markers[k].id<<" "<<all_markers[k].x_pose<<" "<<all_markers[k].y_pose <<endl;   //saving all markers in "all_markers.txt"
     }
   }
   else 

@@ -32,6 +32,7 @@ MarkerDetector marker_detector;
 CameraParameters camera_params;
 vector<Marker> markers;
 float marker_size;
+string txt;
 
 int i=0;
 
@@ -72,7 +73,7 @@ int main(int argc, char** argv){
 
   camera_params.readFromXMLFile(argv[1]);    //aruco params 
   marker_size = stof(argv[2]);
-  loadMarkers(argv[3]);//loading markers
+  txt = argv[3];
 
   marker_detector.setDictionary("ARUCO_MIP_36h12", 0);
 
@@ -127,12 +128,12 @@ void markerFinder(cv::Mat rgb ){
 }
 
 void listenKeyboardGoal(const std_msgs::String::ConstPtr& msg){
-  
+  loadMarkers(txt);//loading markers
+
   listen_id = msg->data.c_str();
   string::size_type sz; 
 
   listen_id_to_int = stoi(listen_id,&sz);  //converting string to int
-
   if(all_markers[listen_id_to_int].id != 0){   //validing a marker(a marker is valid if it was detected in any frame)
     ROS_INFO("[%s] is a valid marker", msg->data.c_str());
     moveToGoal(all_markers[listen_id_to_int].x_pose, all_markers[listen_id_to_int].y_pose);
@@ -189,7 +190,7 @@ void loadMarkers(string saved_markers){
   arq >> markers_number;
 
   //saving markers information in vector "all_markers"
-  for(int i = 0; i <= markers_number; i++){
+  for(int i = 0; i < markers_number; i++){
     arq >> id >> x >> y;
     all_markers[id].id = id;
     all_markers[id].x_pose = x;
