@@ -70,15 +70,16 @@ void MarkerFinder::setMarkerPosesGlobal(Eigen::Affine3f cam_pose)
 		marker_poses_.push_back(cam_pose*P);
 	}
 }
-
+//CHANGE ARUCO DIC
+//ARUCO_MIP_36h12
 MarkerFinder::MarkerFinder()
 {
-	marker_detector_.setDictionary("ARUCO_MIP_36h12", 0);
+	marker_detector_.setDictionary("ARUCO", 0);
 }
 
 void MarkerFinder::markerParam(char params[], float size)
 {
-	marker_detector_.setDictionary("ARUCO_MIP_36h12", 0);
+	marker_detector_.setDictionary("ARUCO", 0);
 	camera_params_.readFromXMLFile(params);
 	marker_size_ = size;
 }
