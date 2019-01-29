@@ -37,6 +37,7 @@ roslaunch turtlebot_rviz_launchers view_navigation.launch
 ```
 
 This will be in /catkin_ws/devel/lib/autonomous_robot, this will look for all markers id and poses(optional).
+Marker dictionary are by Default ARUCO_ORIGINAL, in marker_finder.cpp inside slam path you can change
 
 ```bash
 ./catkin_ws/devel/lib/autonomous_robot/marker_finder_saver
