@@ -37,7 +37,6 @@ roslaunch turtlebot_rviz_launchers view_navigation.launch
 ```
 
 This will be in /catkin_ws/devel/lib/autonomous_robot, this will look for all markers id and poses(optional).
-Marker dictionary are by Default ARUCO_ORIGINAL, in marker_finder.cpp inside slam path you can change
 
 ```bash
 ./catkin_ws/devel/lib/autonomous_robot/marker_finder_saver
@@ -98,6 +97,7 @@ All programs explanation
 
 - Marker Finder Saver
 
+You can change the ARUCO marker dict in >> slam>> marker_finder.cpp >> "	marker_detector_.setDictionary("ARUCO_MIP_36h12", 0);"
 marker_finder_saver.cpp will find markers and save it id and position, it needs camera parameters, markers size, 'marker_saver.txt' and a ros rgb topic.
 To save all markers for use after, use the program "keyboard_input" and type s.
 
@@ -131,8 +131,6 @@ goal.cpp will send a goal to turtlebot moves to a x,y position
 
 Keyboard_input.cpp save all markers id and positions that were saw in any frame when mapping, and in localization sends a goal to move to a marker id.
 
-
- 
 
  
 
