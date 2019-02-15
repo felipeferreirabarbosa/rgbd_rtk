@@ -27,13 +27,6 @@ using namespace std;
 using namespace cv;
 using namespace aruco;
 
-//aruco
-float marker_size;
-MarkerFinder marker_finder; 
-
-Eigen::Affine3f trans_camera_pose; //turtlebot pose
-int i=0;
-
 //where markers id and poses will be saved
 struct markerFound{
   int id;
@@ -41,19 +34,16 @@ struct markerFound{
   float y_pose;
   float z_pose;
 };
-markerFound all_markers[255];
-
-//for keyboard
-string listen_id;
-int listen_id_to_int;
-string all_markers_saved; 
-
-
+MarkerFinder marker_finder; //markerfinder
+Eigen::Affine3f trans_camera_pose; //turtlebot pose
+markerFound all_markers[255]; //marker struct
+string all_markers_saved; //keyboard
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg); //subscribe to rgb image
 void rosMarkerFinder(cv::Mat rgb); //marker finder
 void listenKeyboardSave(const std_msgs::String::ConstPtr& msg); //listening keyboard input for navigation
 void odomCallback(const nav_msgs::Odometry::ConstPtr& msg); //subscribe turtlebot odometry
+void initRos(int argc, char** argv,string rgb_topic);
 
 int main(int argc, char** argv){  
 
@@ -69,29 +59,16 @@ int main(int argc, char** argv){
    if(argc == 6){
      rgb_topic = argv[5];
   }
-  
+  float marker_size;
   marker_size = stof(argv[2]);
-  all_markers_saved = argv[3];
+  all_markers_saved = argv[4];
   marker_finder.markerParam(argv[1] , marker_size, argv[3]);
 
   for(int k=0; k<=254; k++){ //initializing markers
     all_markers[k].id = 0;
   }
 
-  ros::init(argc, argv, "marker_finder_ros");    //starting ros
-  ros::start();
-
-  ros::NodeHandle n;
-  ros::Subscriber sub = n.subscribe("chatter", 1000, listenKeyboardSave);    //subscribing to string msg 
-
-  ros::NodeHandle nh;
-  image_transport::ImageTransport it(nh);
-  image_transport::Subscriber rgb_sub = it.subscribe(rgb_topic, 1, imageCallback);    //subscribing to rgb image
-  
-  ros::NodeHandle nn;
-  ros::Subscriber odom_sub = nn.subscribe("odom", 1, odomCallback);
-
-  ros::spin();  //"while true"
+  initRos(argc,argv,rgb_topic);
 
   return 0;
  }
@@ -131,7 +108,6 @@ void rosMarkerFinder(cv::Mat rgb){
   cv::imshow("OPENCV_WINDOW", rgb);  //showing rgb image
   cv::waitKey(1);
 
-  i++;
 }
 
 void listenKeyboardSave(const std_msgs::String::ConstPtr& msg){
@@ -189,4 +165,20 @@ void odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
   //ROS_INFO("Orientation-> x: [%f], y: [%f], z: [%f], w: [%f]", msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
   //ROS_INFO("Vel-> Linear: [%f], Angular: [%f]", msg->twist.twist.linear.x,msg->twist.twist.angular.z);
   
+}
+void initRos(int argc, char** argv, string rgb_topic){
+  ros::init(argc, argv, "marker_finder_ros");    //starting ros
+  ros::start();
+
+  ros::NodeHandle n;
+  ros::Subscriber sub = n.subscribe("chatter", 1000, listenKeyboardSave);    //subscribing to string msg 
+
+  ros::NodeHandle nh;
+  image_transport::ImageTransport it(nh);
+  image_transport::Subscriber rgb_sub = it.subscribe(rgb_topic, 1, imageCallback);    //subscribing to rgb image
+  
+  ros::NodeHandle nn;
+  ros::Subscriber odom_sub = nn.subscribe("odom", 1, odomCallback);
+
+  ros::spin();  //"while true"
 }

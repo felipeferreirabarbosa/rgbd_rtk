@@ -3,6 +3,7 @@
         "ostream": "cpp",
         "core": "cpp",
         "iostream": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "numericaldiff": "cpp"
     }
 }
