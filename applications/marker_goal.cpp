@@ -10,12 +10,11 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "talker"); //initializing ROS
+  ros::init(argc, argv, "marker_goal_node"); //initializing ROS
   ros::NodeHandle n;
-  ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000); //Publishing string msg
+  ros::Publisher marker_goal_pub = n.advertise<std_msgs::String>("marker_goal", 1000); //Publishing string msg
   ros::Rate loop_rate(10);
   string id_marker;
-  cout<<"q to quit\n";
 
   while (ros::ok())
   {
@@ -31,10 +30,10 @@ int main(int argc, char **argv)
     ss << id_marker;
     msg.data = ss.str();
 
-    ROS_INFO("%s\n\n\n\n\n", msg.data.c_str());
+    ROS_INFO("%s\n", msg.data.c_str());
 
     
-    chatter_pub.publish(msg); //publishing string typed in ros msg
+    marker_goal_pub.publish(msg); //publishing string typed in ros msg
 
     ros::spinOnce();
 
@@ -42,9 +41,7 @@ int main(int argc, char **argv)
 
     if(id_marker.compare("q") == 0)//quiting program when 'q' is typed
       break;
-
   }
-
 
   return 0;
 }
