@@ -1,7 +1,7 @@
 /* 
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2016, Natalnet Laboratory for Perceptual Robotics
+ *  Copyright (c) 2016-2017, Natalnet Laboratory for Perceptual Robotics
  *  All rights reserved.
  *  Redistribution and use in source and binary forms, with or without modification, are permitted provided
  *  that the following conditions are met:
@@ -24,61 +24,47 @@
  *
  */
 
-#ifndef INCLUDE_MARKER_FINDER_H_
-#define INCLUDE_MARKER_FINDER_H_
+#ifndef INCLUDE_OPTICAL_FLOW_VISUAL_ODOMETRY_H_
+#define INCLUDE_OPTICAL_FLOW_VISUAL_ODOMETRY_H_
 
-#include <vector>
 #include <Eigen/Geometry>
-
 #include <opencv2/core/core.hpp>
+#include <pcl/point_cloud.h>
 
-#include <aruco/aruco.h>
+#include <common_types.h>
+#include <klt_tracker.h>
+#include <motion_estimator_ransac.h>
 
-/*
- * Artificial marker finder, used to detect loops
- * on controlled (equiped with artificial markers) environments.
- *
- */
-class MarkerFinder
+class OpticalFlowVisualOdometry
 {
-
-protected:
-	
-	//(ARUCO) Marker detector
-    aruco::MarkerDetector marker_detector_;
-	
-	//Size of each artificial marker
-	float marker_size_;
-		
-	//Set the pose of all detected markers w.r.t. the local/camera ref. frame
-	void setMarkerPosesLocal();
-	
-	//Set the pose of all detected markers w.r.t. the global ref. frame
-	void setMarkerPosesGlobal(Eigen::Affine3f cam_pose);
+private:
+	//Current frame index
+	unsigned long int frame_idx_;
 
 public:
+	//Previous dense point cloud
+	pcl::PointCloud<PointT>::Ptr prev_dense_cloud_;
+
+	//Current dense point cloud
+	pcl::PointCloud<PointT>::Ptr curr_dense_cloud_;
 	
-	//(ARUCO) Camera intrinsic parameters
-	aruco::CameraParameters camera_params_;
-	
-	//Vector with each detected marker
-	std::vector<aruco::Marker> markers_;
-	
-	//Vector with the pose of each detected marker (w.r.t. the local/camera ref. frame)
-	std::vector<Eigen::Affine3f> marker_poses_local_;
-	
-	//Vector with the pose of each detected marker 
-	std::vector<Eigen::Affine3f> marker_poses_;
-	
+	//Feature tracker
+	KLTTracker tracker_;
+
+	//Motion estimator
+	MotionEstimatorRANSAC motion_estimator_;
+
+	//Current camera pose
+	Eigen::Affine3f pose_;
+
 	//Default constructor
-	MarkerFinder();
-	
-	//Constructor with camera intrinsic parameters and marker size
-	MarkerFinder(char params[], float size);
+	OpticalFlowVisualOdometry();
 
-	//Detect ARUCO markers. Also sets the poses of all detected markers in the local and global ref. frames
-	void detectMarkers(const cv::Mat img, Eigen::Affine3f cam_pose);
+	//Constructor with the matrix of intrinsic parameters
+	OpticalFlowVisualOdometry(const Intrinsics intr);
 
+	//Main member function: computes the current camera pose
+	void computeCameraPose(cv::Mat rgb, cv::Mat depth);
 };
 
-#endif /* INCLUDE_MARKER_FINDER_H_ */
+#endif /* INCLUDE_OPTICAL_FLOW_VISUAL_ODOMETRY_H_ */

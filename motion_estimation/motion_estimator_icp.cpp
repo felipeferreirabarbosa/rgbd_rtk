@@ -1,7 +1,7 @@
 /* 
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2016, Natalnet Laboratory for Perceptual Robotics
+ *  Copyright (c) 2016-2018, Natalnet Laboratory for Perceptual Robotics
  *  All rights reserved.
  *  Redistribution and use in source and binary forms, with or without modification, are permitted provided
  *  that the following conditions are met:
@@ -24,61 +24,54 @@
  *
  */
 
-#ifndef INCLUDE_MARKER_FINDER_H_
-#define INCLUDE_MARKER_FINDER_H_
-
-#include <vector>
+#include <cstdio>
 #include <Eigen/Geometry>
+#include <pcl/common/transforms.h>
 
-#include <opencv2/core/core.hpp>
+#include <motion_estimator_icp.h>
 
-#include <aruco/aruco.h>
+using namespace std;
 
-/*
- * Artificial marker finder, used to detect loops
- * on controlled (equiped with artificial markers) environments.
- *
- */
-class MarkerFinder
+void MotionEstimatorICP::downSampleCloud(const pcl::PointCloud<PointT>::Ptr dense_cloud,
+		                                 pcl::PointCloud<PointT>& res_cloud)
 {
+	float radius = 0.05;
 
-protected:
-	
-	//(ARUCO) Marker detector
-    aruco::MarkerDetector marker_detector_;
-	
-	//Size of each artificial marker
-	float marker_size_;
-		
-	//Set the pose of all detected markers w.r.t. the local/camera ref. frame
-	void setMarkerPosesLocal();
-	
-	//Set the pose of all detected markers w.r.t. the global ref. frame
-	void setMarkerPosesGlobal(Eigen::Affine3f cam_pose);
+	sampler_.setInputCloud(dense_cloud);
+	sampler_.setRadiusSearch(radius);
+	sampler_.filter(res_cloud);
+}
 
-public:
-	
-	//(ARUCO) Camera intrinsic parameters
-	aruco::CameraParameters camera_params_;
-	
-	//Vector with each detected marker
-	std::vector<aruco::Marker> markers_;
-	
-	//Vector with the pose of each detected marker (w.r.t. the local/camera ref. frame)
-	std::vector<Eigen::Affine3f> marker_poses_local_;
-	
-	//Vector with the pose of each detected marker 
-	std::vector<Eigen::Affine3f> marker_poses_;
-	
-	//Default constructor
-	MarkerFinder();
-	
-	//Constructor with camera intrinsic parameters and marker size
-	MarkerFinder(char params[], float size);
+MotionEstimatorICP::MotionEstimatorICP()
+{
+	//Set ICP parameters
+	icp_.setMaxCorrespondenceDistance(0.1);
+	icp_.setMaximumIterations (50);
+	icp_.setTransformationEpsilon(1e-9);
+	icp_.setEuclideanFitnessEpsilon(0.001);
+}
 
-	//Detect ARUCO markers. Also sets the poses of all detected markers in the local and global ref. frames
-	void detectMarkers(const cv::Mat img, Eigen::Affine3f cam_pose);
+Eigen::Affine3f MotionEstimatorICP::estimate(const pcl::PointCloud<PointT>::Ptr tgt_dense_cloud,
+		                                     const pcl::PointCloud<PointT>::Ptr src_dense_cloud)
+{
+	Eigen::Affine3f result = Eigen::Affine3f::Identity();
+	pcl::PointCloud<PointT> tgt_cloud, src_cloud, aligned_cloud;
+	pcl::PointCloud<PointT>::Ptr tgt_cloud_ptr = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
+	pcl::PointCloud<PointT>::Ptr src_cloud_ptr = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
 
-};
+	//Uniformly sample input point clouds
+	downSampleCloud(tgt_dense_cloud, tgt_cloud);
+	downSampleCloud(src_dense_cloud, src_cloud);
 
-#endif /* INCLUDE_MARKER_FINDER_H_ */
+	//Set ICP input data
+	*tgt_cloud_ptr = tgt_cloud;
+	*src_cloud_ptr = src_cloud;
+	icp_.setInputSource(src_cloud_ptr);
+	icp_.setInputTarget(tgt_cloud_ptr);
+
+	//Estimate registration transformation
+	icp_.align(aligned_cloud);
+	result = icp_.getFinalTransformation();
+
+	return result;
+}

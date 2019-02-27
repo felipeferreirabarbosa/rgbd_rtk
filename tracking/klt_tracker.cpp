@@ -51,7 +51,7 @@ void KLTTracker::detect_keypoints()
 {
 	//Detect Shi-Tomasi keypoints and add them to a temporary buffer.
 	//The buffer is erased at the end of add_keypoints()
-	goodFeaturesToTrack(curr_frame_gray_, added_pts_, max_pts_, 0.01, 10);
+	goodFeaturesToTrack(curr_frame_gray_, added_pts_, max_pts_, 0.01, 10.0, Mat(), 3, false, 0.04);
 	#ifdef DEBUG
 	printf("detecting keypoints...\n");
 	printf("\tdetected pts.: %lu\n", added_pts_.size());
@@ -270,7 +270,6 @@ bool KLTTracker::track(Mat curr_frame)
 		{
 			//Detect new features, hold them and add them to the tracker in the next frame
 			detect_keypoints();
-			return true;
 		}
 	}
 
@@ -288,7 +287,7 @@ bool KLTTracker::track(Mat curr_frame)
 	cv::swap(curr_frame_gray_, prev_frame_gray_);
 	frame_idx_++;
 
-	return false;
+	return true;
 }
 
 void KLTTracker::initialize_logger(const string timing_file_name, const string tracking_file_name,

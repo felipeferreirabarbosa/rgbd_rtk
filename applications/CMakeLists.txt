@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
-#Compile in c++ 11
-set(CMAKE_CXX_STANDARD 11)
-add_compile_options(-std=c++11)
+project(RGBD_RTK)
 
-#Optimizations Flags
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -15,21 +12,13 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}" )
 
-##
-
-project(RGBD_RTK)
+set(CMAKE_CXX_STANDARD 11)
+add_compile_options(-std=c++11)
 
 message(STATUS ">>> applications subdirectory")
 
-add_executable(autonomous_robot autonomous_robot.cpp)
-add_executable(goal goal.cpp)
-add_executable(marker_finder_saver marker_finder_saver.cpp)
-add_executable(motion_estimator_ros motion_estimator_ros.cpp)
-add_executable(bag_loader bag_loader.cpp)
-add_executable(marker_goal marker_goal.cpp)
 
-
-
+add_executable(optical_flow_visual_odometry_test optical_flow_visual_odometry_test.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
@@ -38,30 +27,27 @@ find_library(RGBD_RTK_TRACKING NAMES rgbd_rtk_tracking)
 find_library(RGBD_RTK_COMMON NAMES rgbd_rtk_common)
 find_library(RGBD_RTK_VISUALIZATION NAMES rgbd_rtk_visualization)
 find_library(RGBD_RTK_MOTION_ESTIMATION NAMES rgbd_rtk_motion_estimation)
+find_library(RGBD_RTK_VISUAL_ODOMETRY NAMES rgbd_rtk_visual_odometry)
 
 
-target_link_libraries(autonomous_robot  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING} ${RGBD_RTK_SLAM}
-                                             ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
-                                             ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES}
- ${OpenCV_LIBS} ${aruco_LIBS})
-target_link_libraries(goal  ${catkin_LIBRARIES} ${OpenCV_LIBS})
-target_link_libraries(marker_finder_saver  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
-                                             ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
-                                             ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES}  ${RGBD_RTK_SLAM}
- ${OpenCV_LIBS} ${aruco_LIBS})
-target_link_libraries(motion_estimator_ros  ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
-                                             ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
-                                             ${RGBD_RTK_MOTION_ESTIMATION} ${catkin_LIBRARIES} ${OpenCV_LIBS})
-target_link_libraries(bag_loader   ${catkin_LIBRARIES} ${OpenCV_LIBS})
-target_link_libraries(marker_goal  ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(optical_flow_visual_odometry_test ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
+	                                                    ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
+	                                                    ${RGBD_RTK_MOTION_ESTIMATION}
+	                                                    ${RGBD_RTK_VISUAL_ODOMETRY} ${catkin_LIBRARIES})
 
 
+install(TARGETS optical_flow_visual_odometry_test
+				RUNTIME DESTINATION bin)
 
-
-install(TARGETS autonomous_robot		
-		goal
-		marker_finder_saver
-		motion_estimator_ros
-		bag_loader
-		marker_goal
+# Build SLAM related applications only if ARUCO was found
+if(aruco_FOUND)
+	add_executable(marker_finder_test marker_finder_test.cpp)
+	find_library(RGBD_RTK_SLAM NAMES rgbd_rtk_slam)
+	target_link_libraries(marker_finder_test ${PCL_LIBRARIES} ${RGBD_RTK_IO} ${RGBD_RTK_TRACKING}
+										 ${RGBD_RTK_COMMON} ${RGBD_RTK_VISUALIZATION}
+										 ${RGBD_RTK_MOTION_ESTIMATION}
+										 ${RGBD_RTK_VISUAL_ODOMETRY}
+										 ${RGBD_RTK_SLAM})
+	install(TARGETS marker_finder_test
         RUNTIME DESTINATION bin)
+endif()

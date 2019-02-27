@@ -1,7 +1,7 @@
 /* 
  *  Software License Agreement (BSD License)
  *
- *  Copyright (c) 2016, Natalnet Laboratory for Perceptual Robotics
+ *  Copyright (c) 2016-2018, Natalnet Laboratory for Perceptual Robotics
  *  All rights reserved.
  *  Redistribution and use in source and binary forms, with or without modification, are permitted provided
  *  that the following conditions are met:
@@ -24,61 +24,49 @@
  *
  */
 
-#ifndef INCLUDE_MARKER_FINDER_H_
-#define INCLUDE_MARKER_FINDER_H_
+#include <icp_odometry.h>
+#include <geometry.h>
 
-#include <vector>
-#include <Eigen/Geometry>
+using namespace std;
 
-#include <opencv2/core/core.hpp>
-
-#include <aruco/aruco.h>
-
-/*
- * Artificial marker finder, used to detect loops
- * on controlled (equiped with artificial markers) environments.
- *
- */
-class MarkerFinder
+ICPOdometry::ICPOdometry()
 {
+	frame_idx_ = 0;
+	pose_ = Eigen::Affine3f::Identity();
+	guess_ = Eigen::Affine3f::Identity();
 
-protected:
-	
-	//(ARUCO) Marker detector
-    aruco::MarkerDetector marker_detector_;
-	
-	//Size of each artificial marker
-	float marker_size_;
-		
-	//Set the pose of all detected markers w.r.t. the local/camera ref. frame
-	void setMarkerPosesLocal();
-	
-	//Set the pose of all detected markers w.r.t. the global ref. frame
-	void setMarkerPosesGlobal(Eigen::Affine3f cam_pose);
+	prev_dense_cloud_ = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
+	curr_dense_cloud_ = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
+}
 
-public:
-	
-	//(ARUCO) Camera intrinsic parameters
-	aruco::CameraParameters camera_params_;
-	
-	//Vector with each detected marker
-	std::vector<aruco::Marker> markers_;
-	
-	//Vector with the pose of each detected marker (w.r.t. the local/camera ref. frame)
-	std::vector<Eigen::Affine3f> marker_poses_local_;
-	
-	//Vector with the pose of each detected marker 
-	std::vector<Eigen::Affine3f> marker_poses_;
-	
-	//Default constructor
-	MarkerFinder();
-	
-	//Constructor with camera intrinsic parameters and marker size
-	MarkerFinder(char params[], float size);
+ICPOdometry::ICPOdometry(Intrinsics intr)
+{
+	frame_idx_ = 0;
+	pose_ = Eigen::Affine3f::Identity();
+	guess_ = Eigen::Affine3f::Identity();
+	intr_ = intr;
 
-	//Detect ARUCO markers. Also sets the poses of all detected markers in the local and global ref. frames
-	void detectMarkers(const cv::Mat img, Eigen::Affine3f cam_pose);
+	prev_dense_cloud_ = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
+	curr_dense_cloud_ = pcl::PointCloud<PointT>::Ptr(new pcl::PointCloud<PointT>);
+}
 
-};
+void ICPOdometry::computeCameraPose(cv::Mat rgb, cv::Mat depth)
+{
+	Eigen::Affine3f trans = Eigen::Affine3f::Identity();
 
-#endif /* INCLUDE_MARKER_FINDER_H_ */
+	//Get dense point cloud from RGB-D data
+	*curr_dense_cloud_ = getPointCloud(rgb, depth, intr_);
+
+	//Estimate motion between the current and the previous point clouds
+	if(frame_idx_ > 0)
+	{
+		trans = motion_estimator_.estimate(prev_dense_cloud_, curr_dense_cloud_);
+		pose_ = pose_*trans;
+	}
+
+	//Let the prev. cloud in the next frame be the current cloud
+	*prev_dense_cloud_ = *curr_dense_cloud_;
+
+	//Increment the frame index
+	frame_idx_++;
+}

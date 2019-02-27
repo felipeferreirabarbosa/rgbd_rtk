@@ -26,70 +26,90 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <limits>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
-#include "sequence_loader.h"
+#include <rgbd_loader.h>
+#include <klt_tracker.h>
+#include <common_types.h>
 
 using namespace std;
 using namespace cv;
 
-void SequenceLoader::processFile(const string file_name)
+void draw_last_track(Mat& img, const vector<Point2f> prev_pts, const vector<Point2f> curr_pts)
 {
-	ifstream index_file(file_name.c_str());
-	if(!index_file.is_open())
+	for(size_t k = 0; k < curr_pts.size(); k++)
 	{
-		fprintf(stderr, "ERROR: file %s was not found.\nExiting.\n", file_name.c_str());
-		exit(0);
+		Point2i pt1, pt2;
+		pt1.x = prev_pts[k].x;
+		pt1.y = prev_pts[k].y;
+		pt2.x = curr_pts[k].x;
+		pt2.y = curr_pts[k].y;
+
+		circle(img, pt1, 1, CV_RGB(0,0,255), 1);
+		circle(img, pt2, 3, CV_RGB(0,255,0), 1);
+		line(img, pt1, pt2, CV_RGB(0,255,0));
 	}
-	printf("Opening index file: %s\n", file_name.c_str());
-
-	//Extract path from the supplied argument
-	int p = file_name.rfind('/');
-	path_ = file_name.substr(0, p+1);
-
-	while(!index_file.eof())
-	{
-		//Skip comments (lines starting with a '#')
-		int c = index_file.peek();
-		if(c != int('#'))
-		{
-			string ts, img_file;
-			index_file >> ts >> img_file;
-
-			//Compatiblity with index files ended with \n
-			if(img_file != "")
-			{
-				num_images_++;
-				img_names_.push_back(img_file);
-			}
-		}
-		else
-		{
-			index_file.ignore(numeric_limits<streamsize>::max(), '\n');
-		}
-	}
-	index_file.close();
 }
 
-Mat SequenceLoader::getNextImage()
+void draw_tracks(Mat& img, const vector<Tracklet> tracklets)
 {
-	if(curr_img_ < num_images_)
+	for(size_t i = 0; i < tracklets.size(); i++)
 	{
-		string file_name = path_ + img_names_[curr_img_++];
-		Mat img = imread(file_name, CV_LOAD_IMAGE_UNCHANGED);
-		if(img.empty())
+		for(size_t j = 0; j < tracklets[i].pts2D_.size(); j++)
 		{
-			fprintf(stderr, "ERROR: image file %s not found.\nExiting.\n", file_name.c_str());
-			exit(0);
+			Point2i pt1;
+			pt1.x = tracklets[i].pts2D_[j].x;
+			pt1.y = tracklets[i].pts2D_[j].y;
+			circle(img, pt1, 3, CV_RGB(0,255,0), 1);
+			if(j > 0)
+			{
+				Point2i pt2;
+				pt2.x = tracklets[i].pts2D_[j-1].x;
+				pt2.y = tracklets[i].pts2D_[j-1].y;
+				line(img, pt1, pt2, CV_RGB(0,255,0));
+			}
 		}
-		return img;
 	}
-	else
+}
+
+int main(int argc, char **argv)
+{
+	string index_file_name;
+	RGBDLoader loader;
+	KLTTracker tracker;
+
+	Mat frame, depth;
+
+	if(argc != 2)
 	{
-		fprintf(stderr, "ERROR: all images of the sequence have been loaded.\nExiting.\n");
+		fprintf(stderr, "Usage: %s <index file>\n", argv[0]);
 		exit(0);
 	}
+
+	index_file_name = argv[1];
+	loader.processFile(index_file_name);
+
+	//Track points on each image
+	for(int i = 0; i < loader.num_images_; i++)
+	{
+		loader.getNextImage(frame, depth);
+
+		tracker.track(frame);
+		
+		draw_last_track(frame, tracker.prev_pts_, tracker.curr_pts_);
+		//draw_tracks(frame, tracker.tracklets_);
+
+		imshow("Image view", frame);
+		imshow("Depth view", depth);
+		char key = waitKey(15);
+		if(key == 27 || key == 'q' || key == 'Q')
+		{
+			printf("Exiting.\n");
+			break;
+		}
+	}
+
+	return 0;
 }

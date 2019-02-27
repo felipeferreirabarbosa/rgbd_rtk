@@ -26,6 +26,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+
 #include "marker_finder.h"
 
 using namespace std;
@@ -66,24 +67,18 @@ void MarkerFinder::setMarkerPosesGlobal(Eigen::Affine3f cam_pose)
 		P(2,0) = R.at<float>(2,0); P(2,1) = R.at<float>(2,1); P(2,2) = R.at<float>(2,2);
 		P(0,3) = markers_[i].Tvec.at<float>(0,0); P(1,3) = markers_[i].Tvec.at<float>(1,0); P(2,3) = markers_[i].Tvec.at<float>(2,0);
 		
-		marker_poses_.push_back(P.inverse() * cam_pose);
+		marker_poses_.push_back(cam_pose*P);
 	}
 }
-//CHANGE ARUCO DIC
-//ARUCO_MIP_36h12
+
 MarkerFinder::MarkerFinder()
 {
 	marker_detector_.setDictionary("ARUCO_MIP_36h12", 0);
 }
 
-void MarkerFinder::markerParam(char params[], float size, char aruco_dic[])
+MarkerFinder::MarkerFinder(char params[], float size)
 {
-	try{
-		marker_detector_.setDictionary(aruco_dic, 0);
-  	}
-  	catch(char param[]){
-    	cout << "An exception occurred. Exception Nr. "  << param<<'\n';
-  	}
+	marker_detector_.setDictionary("ARUCO_MIP_36h12", 0);
 	camera_params_.readFromXMLFile(params);
 	marker_size_ = size;
 }
@@ -93,5 +88,6 @@ void MarkerFinder::detectMarkers(const cv::Mat img, Eigen::Affine3f cam_pose)
 	markers_.clear();
 	marker_detector_.detect(img, markers_, camera_params_, marker_size_);
 	
+	setMarkerPosesLocal();
 	setMarkerPosesGlobal(cam_pose);
 }

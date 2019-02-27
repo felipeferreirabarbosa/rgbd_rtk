@@ -24,61 +24,65 @@
  *
  */
 
-#ifndef INCLUDE_MARKER_FINDER_H_
-#define INCLUDE_MARKER_FINDER_H_
-
-#include <vector>
+#include <cstdio>
+#include <cstdlib>
 #include <Eigen/Geometry>
-
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
-#include <aruco/aruco.h>
+#include <geometry.h>
+#include <rgbd_loader.h>
+#include <icp_odometry.h>
+#include <reconstruction_visualizer.h>
 
-/*
- * Artificial marker finder, used to detect loops
- * on controlled (equiped with artificial markers) environments.
- *
- */
-class MarkerFinder
+using namespace std;
+using namespace cv;
+
+int main(int argc, char **argv)
 {
+	string index_file_name;
+	RGBDLoader loader;
+	Intrinsics intr(0);
+	ICPOdometry icpo(intr);
+	ReconstructionVisualizer visualizer;
+	Mat frame, depth;
 
-protected:
-	
-	//(ARUCO) Marker detector
-    aruco::MarkerDetector marker_detector_;
-	
-	//Size of each artificial marker
-	float marker_size_;
-		
-	//Set the pose of all detected markers w.r.t. the local/camera ref. frame
-	void setMarkerPosesLocal();
-	
-	//Set the pose of all detected markers w.r.t. the global ref. frame
-	void setMarkerPosesGlobal(Eigen::Affine3f cam_pose);
+	if(argc != 2)
+	{
+		fprintf(stderr, "Usage: %s <index file>\n", argv[0]);
+		exit(0);
+	}
 
-public:
-	
-	//(ARUCO) Camera intrinsic parameters
-	aruco::CameraParameters camera_params_;
-	
-	//Vector with each detected marker
-	std::vector<aruco::Marker> markers_;
-	
-	//Vector with the pose of each detected marker (w.r.t. the local/camera ref. frame)
-	std::vector<Eigen::Affine3f> marker_poses_local_;
-	
-	//Vector with the pose of each detected marker 
-	std::vector<Eigen::Affine3f> marker_poses_;
-	
-	//Default constructor
-	MarkerFinder();
-	
-	//Constructor with camera intrinsic parameters and marker size
-	MarkerFinder(char params[], float size);
+	index_file_name = argv[1];
+	loader.processFile(index_file_name);
 
-	//Detect ARUCO markers. Also sets the poses of all detected markers in the local and global ref. frames
-	void detectMarkers(const cv::Mat img, Eigen::Affine3f cam_pose);
+	//Compute ICP odometry on each image
+	for(int i = 0; i < loader.num_images_; i++)
+	{
+		//Load RGB-D image 
+		loader.getNextImage(frame, depth);
 
-};
+		//Estimate current camera pose
+		icpo.computeCameraPose(frame, depth);
 
-#endif /* INCLUDE_MARKER_FINDER_H_ */
+		if(i == 0) visualizer.addReferenceFrame(icpo.pose_, "origin");
+		//visualizer.addQuantizedPointCloud(icpo.curr_dense_cloud_, 0.3, icpo.pose_);
+		visualizer.viewReferenceFrame(icpo.pose_);
+		//visualizer.viewPointCloud(icpo.curr_dense_cloud_, icpo.pose_);
+		//visualizer.viewQuantizedPointCloud(icpo.curr_dense_cloud_, 0.02, icpo.pose_);
+
+		visualizer.spinOnce();
+
+		//Show RGB-D image
+		imshow("Image view", frame);
+		imshow("Depth view", depth);
+		char key = waitKey(1);
+		if(key == 27 || key == 'q' || key == 'Q')
+		{
+			printf("Exiting.\n");
+			break;
+		}
+	}
+
+	return 0;
+}
