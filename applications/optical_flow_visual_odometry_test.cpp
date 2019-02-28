@@ -76,6 +76,20 @@ int main(int argc, char** argv){
   rgb_topic = "camera/rgb/image_raw"; 
   depth_topic = "camera/depth/image_raw";
 
+  if(argc == 1){
+    printf( "You can set the topics you want for"
+      "rgb and depth. By default using camera/rgb/image_raw and camera/depth/image_raw as rgb and depth topics\n");
+  }
+  if(argc == 2){
+    printf("rgb_topic : %s , depth_topic : camera/depth/image_raw as default \n", argv[1]);
+    rgb_topic = argv[1];
+  }
+  if(argc == 3){
+    printf("rgb_topic : %s , depth_topic : %s \n", argv[1], argv[2]);
+    rgb_topic = argv[1];
+    depth_topic = argv[2];
+  }
+
   initRos(argc, argv, rgb_topic, depth_topic);
 
 
@@ -91,14 +105,14 @@ void callback(const sensor_msgs::ImageConstPtr& msg_rgb ,const sensor_msgs::Imag
     img_ptr_depth = cv_bridge::toCvCopy(*msg_depth, sensor_msgs::image_encodings::TYPE_16UC1);
   }
   catch (cv_bridge::Exception& e){
-    ROS_ERROR("cv_bridge exception:  %s", e.what());
+    ROS_ERROR("cv_bridge exception1:  %s", e.what());
     return;
   }
   try{
-    img_ptr_rgb = cv_bridge::toCvCopy(*msg_rgb, sensor_msgs::image_encodings::TYPE_8UC3);
+    img_ptr_rgb = cv_bridge::toCvCopy(*msg_rgb, sensor_msgs::image_encodings::BGR8);
   }
   catch (cv_bridge::Exception& e){
-    ROS_ERROR("cv_bridge exception:  %s", e.what());
+    ROS_ERROR("cv_bridge exception2:  %s", e.what());
     return;
   }
 
@@ -112,8 +126,8 @@ void initRos(int argc, char** argv, string rgb_topic, string depth_topic){
   ros::NodeHandle nh;
 
 
-  message_filters::Subscriber<sensor_msgs::Image> subscriber_depth(nh , rgb_topic , 1);
-  message_filters::Subscriber<sensor_msgs::Image> subscriber_rgb(nh , depth_topic , 1);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_depth(nh , depth_topic , 1);
+  message_filters::Subscriber<sensor_msgs::Image> subscriber_rgb(nh , rgb_topic , 1);
 
 
   #ifdef EXACT
@@ -147,7 +161,7 @@ void optical_flow(cv::Mat frame, cv::Mat depth){
   }
 
   if(i == 0) visualizer.addReferenceFrame(vo.pose_, "origin");
-  visualizer.addQuantizedPointCloud(vo.curr_dense_cloud_, 0.3, vo.pose_);
+  visualizer.addQuantizedPointCloud(vo.curr_dense_cloud_, 0.01, vo.pose_);
   visualizer.viewReferenceFrame(vo.pose_);
   visualizer.viewPointCloud(vo.curr_dense_cloud_, vo.pose_);
   //visualizer.viewQuantizedPointCloud(vo.curr_dense_cloud_, 0.02, vo.pose_);
@@ -156,7 +170,7 @@ void optical_flow(cv::Mat frame, cv::Mat depth){
 
   //Show RGB-D image
   imshow("Image view", frame);
-  imshow("Depth view", depth);
+  waitKey(1);
 
   i++;
 }
